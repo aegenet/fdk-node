@@ -19,7 +19,7 @@ jobs:
       - run: npm ci --production
       - run: git status
       - run: ls -al
-      - run: npm version "999.$(date +%s).0"
+      - run: npm run bump
       - run: npm publish --dry-run=true
       - name: Publish Package to npm registry if branch is master
         if: ${{ github.ref == 'refs/heads/master'}}

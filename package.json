@@ -5,7 +5,8 @@
   "main": "fn-fdk.js",
   "scripts": {
     "test": "standard && node test/fn-fdk-test.js",
-    "fix": "standard --fix"
+    "fix": "standard --fix",
+    "bump": "node ./node_modules/json -I -f ./package.json -e \"this.version='999.' + new Date().getTime() + '.0';this.devDependencies={};this.scripts={};\""
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
@@ -25,6 +26,7 @@
   ],
   "license": "Apache-2.0",
   "devDependencies": {
+    "json": "^11.0.0",
     "rewire": "^6.0.0",
     "sinon": "^9.0.1",
     "standard": "^16.0.4",
