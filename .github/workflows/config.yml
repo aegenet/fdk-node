@@ -16,7 +16,7 @@ jobs:
       - run: npm --version
       - run: node -v
       # npm ci instead of npm i
-      - run: npm ci --production
+      - run: npm ci
       - run: git status
       - run: ls -al
       - run: npm run bump
