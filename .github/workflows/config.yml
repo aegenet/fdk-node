@@ -15,6 +15,7 @@ jobs:
           scope: '@aegenet'
       - run: npm --version
       - run: node -v
+      # npm ci instead of npm i
       - run: npm ci --production
       - run: git status
       - run: ls -al
