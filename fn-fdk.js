@@ -259,16 +259,25 @@ function handleHTTPStream (fnfunction, options) {
   const listenPort = process.env.FN_LISTENER
   const inputMode = options != null ? (options.inputMode || 'json') : 'json'
 
-  if (listenPort == null || !listenPort.startsWith('unix:')) {
-    console.error('Invalid configuration no FN_LISTENER variable set or invalid FN_LISTENER value', +listenPort)
+  const numericPort = parseInt(listenPort, 10)
+  const isNumericPort = !isNaN(numericPort)
+
+  if (listenPort == null || (!isNumericPort && !listenPort.startsWith('unix:'))) {
+    console.error('Invalid configuration no FN_LISTENER variable set or invalid FN_LISTENER value', listenPort)
     process.exit(2)
   }
 
-  const listenFile = listenPort.substr('unix:'.length)
-  const listenPath = path.dirname(listenFile)
+  let listenPortOrFile /*: string | number */
+  let listenFile /*: string | number */
+  let tmpFileBaseName /*: string */
 
-  const tmpFileBaseName = path.basename(listenFile) + '.tmp'
-  const tmpFile = listenPath + '/' + tmpFileBaseName
+  if (!isNumericPort) {
+    listenFile = listenPort.substring('unix:'.length)
+    tmpFileBaseName = path.basename(listenFile) + '.tmp'
+    listenPortOrFile = path.dirname(listenFile) + '/' + tmpFileBaseName
+  } else {
+    listenPortOrFile = numericPort
+  }
 
   const fnLogframeName = process.env.FN_LOGFRAME_NAME || ''
   const fnLogframeHdr = process.env.FN_LOGFRAME_HDR || ''
@@ -332,20 +341,27 @@ function handleHTTPStream (fnfunction, options) {
 
   const currentServer = http.createServer(functionHandler)
   currentServer.keepAliveTimeout = 0 // turn off
-  currentServer.listen(tmpFile, () => {
-    fs.chmodSync(tmpFile, '666')
-
-    fs.symlinkSync(tmpFileBaseName, listenFile)
+  currentServer.listen(listenPortOrFile, () => {
+    if (!isNumericPort) {
+      fs.chmodSync(listenPortOrFile, '666')
+      fs.symlinkSync(tmpFileBaseName, listenFile)
+    }
   })
 
   currentServer.on('error', (error) => {
-    console.warn(`Unable to connect to unix socket ${tmpFile}`, error)
+    if (isNumericPort) {
+      console.warn(`Unable to connect to port ${listenPortOrFile}`, error)
+    } else {
+      console.warn(`Unable to connect to unix socket ${listenPortOrFile}`, error)
+    }
     process.exit(3)
   })
 
   return () => {
     currentServer.close()
-    fs.unlinkSync(listenFile)
+    if (!isNumericPort) {
+      fs.unlinkSync(listenFile)
+    }
   }
 }
 
@@ -360,6 +376,8 @@ function canonHeader (h) {
       const last = h.substr(1)
       const first = h.substr(0, 1)
       return first.toUpperCase() + last.toLowerCase()
+    } else {
+      return ''
     }
   }).join('-')
 }
@@ -441,6 +459,14 @@ class HTTPGatewayContext {
    */
   set statusCode (status) {
     this.ctx.setResponseHeader('Fn-Http-Status', status)
+  }
+
+  /**
+   * get the status code of the HTTP response
+   * @param status {int}
+   */
+  get statusCode () {
+    return this.ctx.getResponseHeader('Fn-Http-Status')
   }
 
   /**
